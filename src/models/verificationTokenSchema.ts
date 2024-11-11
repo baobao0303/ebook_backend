@@ -1,4 +1,4 @@
-import { Model, Schema, model } from "mongoose";
+import { model, Schema, Model } from "mongoose";
 import { hashSync, compareSync, genSaltSync } from "bcrypt";
 
 interface VerificationTokenDoc {
@@ -6,11 +6,9 @@ interface VerificationTokenDoc {
   token: string;
   expires: Date;
 }
-
 interface Methods {
   compare(token: string): boolean;
 }
-
 const verificationTokenSchema = new Schema<VerificationTokenDoc, {}, Methods>({
   userId: {
     type: String,
@@ -26,20 +24,17 @@ const verificationTokenSchema = new Schema<VerificationTokenDoc, {}, Methods>({
     expires: 60 * 60 * 24,
   },
 });
-
 verificationTokenSchema.pre("save", function (next) {
   if (this.isModified("token")) {
     const salt = genSaltSync(10);
     this.token = hashSync(this.token, salt);
   }
-
   next();
+  3;
 });
-
-verificationTokenSchema.methods.compare = function (token) {
+verificationTokenSchema.methods.compare = function (token: string) {
   return compareSync(token, this.token);
 };
-
 const VerificationTokenModel = model("VerificationToken", verificationTokenSchema);
 
 export default VerificationTokenModel as Model<VerificationTokenDoc, {}, Methods>;

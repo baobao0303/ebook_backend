@@ -1,7 +1,6 @@
 import { Request, Response, RequestHandler } from "express";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
-import VerificationTokenModel from "@/models/verificationToken";
+import VerificationTokenModel from "@/models/verificationTokenSchema";
 import UserModel from "@/models/user";
 import mail from "@/utils/mail";
 import { formatUserProfile, sendErrorResponse } from "@/utils/helper";
@@ -10,25 +9,15 @@ import jwt from "jsonwebtoken";
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
   // and send that link to the users email address
-
-  /*
-    1. Generate Unique token for every users
-    2. Store that token securely inside the database
-       so that we can validate it in future.
-    3. Create a link which include that secure token and user information
-    4. Send that link to users email address.
-    5. Notify user to look inside the email to get the login link
-  */
-
   const { email } = req.body;
   let user = await UserModel.findOne({ email });
+
   if (!user) {
-    // if no user found then create new user.
+    // if no user found then create new user
     user = await UserModel.create({ email });
   }
 
   const userId = user._id.toString();
-
   // if we already have token for this user it will remove that first
   await VerificationTokenModel.findOneAndDelete({ userId });
 
@@ -50,6 +39,7 @@ export const generateAuthLink: RequestHandler = async (req, res) => {
 };
 
 export const verifyAuthToken: RequestHandler = async (req, res) => {
+  // http://localhost:8989/auth/verify?token=c5154e6cfe712f76bcc87fce283c23a3b4d055c916b1a8536b5f8c9eead21c01c7de33ef&userId=6731a96b575eeb6b222b34bb
   const { token, userId } = req.query;
 
   if (typeof token !== "string" || typeof userId !== "string") {
@@ -82,8 +72,8 @@ export const verifyAuthToken: RequestHandler = async (req, res) => {
 
   // TODO: authentication
   const payload = { userId: user._id };
-
-  const authToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+  //process.env.JWT_SECRET as string instead to process.env.JWT_SECRET!
+  const authToken = jwt.sign(payload, process.env.JWT_SECRET as string, {
     expiresIn: "15d",
   });
 
@@ -91,8 +81,19 @@ export const verifyAuthToken: RequestHandler = async (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV !== "development",
     sameSite: "strict",
-    expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 15),
   });
+  // res.redirect(`${process.env.AUTH_SUCCESS_URL}?profile=${JSON.stringify(formatUserProfile(user))}`);
+  res.send();
+};
 
-  res.redirect(`${process.env.AUTH_SUCCESS_URL}?profile=${JSON.stringify(formatUserProfile(user))}`);
+export const sendProfileInfo: RequestHandler = (req, res) => {
+  res.json({
+    profile: req.user,
+  });
+};
+
+export const logout: RequestHandler = (req, res) => {
+  res.clearCookie("authToken").send();
+  res.json({ message: "Logout successful!" });
 };

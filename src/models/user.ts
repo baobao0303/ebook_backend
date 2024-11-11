@@ -1,5 +1,4 @@
 import { ObjectId, Schema, model } from "mongoose";
-
 export interface UserDoc {
   _id: ObjectId;
   email: string;

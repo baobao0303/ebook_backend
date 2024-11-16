@@ -1,14 +1,18 @@
-import { generateAuthLink, logout, sendProfileInfo, verifyAuthToken } from "@/controllers/auth";
+import { generateAuthLink, logout, sendProfileInfo, updateProfile, verifyAuthToken } from "@/controllers/auth";
 import { isAuth } from "@/middlewares/auth";
-import { emailValidationSchema, validate } from "@/middlewares/validator";
+import { fileParser } from "@/middlewares/file";
+import { emailValidationSchema, newUserSchema, validate } from "@/middlewares/validator";
 import { Router } from "express";
-import { Schema } from "zod";
 
-const authRouter = Router();
+const authRoute = Router();
 
-// /auth/generate-link
-authRouter.post("/generate-link", validate(emailValidationSchema), generateAuthLink);
-authRouter.get("/verify", verifyAuthToken);
-authRouter.get("/profile", isAuth, sendProfileInfo);
-authRouter.get("/logout", isAuth, logout);
-export default authRouter;
+// write middlewares for emailValidation
+// authRoute.get("/generate-link", emailValidationMiddleware, generateAuthLink);
+
+// write middlewares for emailValidation equal library zod
+authRoute.post("/generate-link", validate(emailValidationSchema), generateAuthLink);
+authRoute.get("/verify", verifyAuthToken);
+authRoute.get("/profile", isAuth, sendProfileInfo);
+authRoute.post("/logout", isAuth, logout);
+authRoute.put("/profile", isAuth, fileParser, validate(newUserSchema), updateProfile);
+export default authRoute;

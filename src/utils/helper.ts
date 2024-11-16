@@ -1,22 +1,22 @@
 import { UserDoc } from "@/models/user";
-import { Response } from "express";
-interface ErrorResponseType {
+import { Response, Request } from "express";
+type ErrorResponseType = {
   res: Response;
   message: string;
   status: number;
-}
-
-export function sendErrorResponse({ res, message, status }: ErrorResponseType) {
+};
+export const sendErrorResponse = ({ res, message, status }: ErrorResponseType) => {
   res.status(status).json({
     message,
   });
-}
-
-export const formatUserProfile = (user: UserDoc) => {
+};
+export const formatUserProfile = (user: UserDoc): Request["user"] => {
   return {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    image: user.role,
+    role: user.role,
+    // @ts-ignore
+    avatar: user.avatar?.url,
   };
 };

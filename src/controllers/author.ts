@@ -14,26 +14,33 @@ export const registerAuthor: RequestAuthorHandler = async (req, res) => {
       res,
     });
   }
+
   const newAuthor = new AuthorModel({
     name: body.name,
     about: body.about,
     userId: user.id,
     socialLinks: body.socialLinks,
   });
+
   const uniqueSlug = slugify(`${newAuthor.name} ${newAuthor._id}`, {
     lower: true,
     replacement: "-",
   });
+
   newAuthor.slug = uniqueSlug;
   await newAuthor.save();
+
   await UserModel.findByIdAndUpdate(user.id, {
     role: "author",
     authorId: newAuthor._id,
   });
+
   res.json({ message: "Thanks for registering as an author." });
 };
+
 export const getAuthorDetails: RequestHandler = async (req, res) => {
   const { slug } = req.params;
+
   const author = await AuthorModel.findOne({ slug });
   if (!author)
     return sendErrorResponse({
@@ -41,6 +48,7 @@ export const getAuthorDetails: RequestHandler = async (req, res) => {
       message: "Author not found!",
       status: 404,
     });
+
   res.json({
     id: author._id,
     name: author.name,

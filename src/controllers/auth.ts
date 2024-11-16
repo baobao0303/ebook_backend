@@ -1,17 +1,28 @@
-import { Request, Response, RequestHandler } from "express";
+import { RequestHandler } from "express";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import VerificationTokenModel from "@/models/verificationToken";
 import UserModel from "@/models/user";
 import mail from "@/utils/mail";
 import { formatUserProfile, sendErrorResponse } from "@/utils/helper";
 import jwt from "jsonwebtoken";
-import VerificationTokenModel from "@/models/verificatifonToken";
-import { updateAvatarToAws, updateAvatarToCloudinary } from "@/utils/fileUpload";
+import {
+  updateAvatarToAws,
+  updateAvatarToCloudinary,
+} from "@/utils/fileUpload";
 import slugify from "slugify";
 
 export const generateAuthLink: RequestHandler = async (req, res) => {
   // Generate authentication link
   // and send that link to the users email address
+
+  /*
+    1. Generate Unique token for every users
+    2. Store that token securely inside the database
+       so that we can validate it in future.
+    3. Create a link which include that secure token and user information
+    4. Send that link to users email address.
+    5. Notify user to look inside the email to get the login link
+  */
 
   const { email } = req.body;
   let user = await UserModel.findOne({ email });
@@ -87,15 +98,20 @@ export const verifyAuthToken: RequestHandler = async (req, res) => {
     expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
   });
 
-  res.redirect(`${process.env.AUTH_SUCCESS_URL}?profile=${JSON.stringify(formatUserProfile(user))}`);
+  res.redirect(
+    `${process.env.AUTH_SUCCESS_URL}?profile=${JSON.stringify(
+      formatUserProfile(user)
+    )}`
+  );
 };
-export const sendProfileInfo: RequestHandler = (req, res, next) => {
+
+export const sendProfileInfo: RequestHandler = (req, res) => {
   res.json({
     profile: req.user,
   });
 };
 
-export const logout: RequestHandler = (req, res, next) => {
+export const logout: RequestHandler = (req, res) => {
   res.clearCookie("authToken").send();
 };
 
@@ -129,9 +145,14 @@ export const updateProfile: RequestHandler = async (req, res) => {
       lower: true,
       replacement: "-",
     })}.png`;
-    user.avatar = await updateAvatarToAws(file, uniqueFileName, user.avatar?.id);
+    user.avatar = await updateAvatarToAws(
+      file,
+      uniqueFileName,
+      user.avatar?.id
+    );
 
     await user.save();
   }
+
   res.json({ profile: formatUserProfile(user) });
 };

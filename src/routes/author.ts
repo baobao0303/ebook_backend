@@ -5,7 +5,12 @@ import { Router } from "express";
 
 const authorRouter = Router();
 
-authorRouter.post("/register", isAuth, validate(newAuthorSchema), registerAuthor);
+authorRouter.post(
+  "/register",
+  isAuth,
+  validate(newAuthorSchema),
+  registerAuthor
+);
 authorRouter.get("/:slug", getAuthorDetails);
 
 export default authorRouter;

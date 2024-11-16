@@ -1,4 +1,5 @@
 import { ObjectId, Schema, model } from "mongoose";
+
 export interface UserDoc {
   _id: ObjectId;
   email: string;
@@ -36,9 +37,10 @@ const userSchema = new Schema<UserDoc>({
   },
   authorId: {
     type: Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Author",
   },
 });
+
 const UserModel = model("User", userSchema);
 
 export default UserModel;

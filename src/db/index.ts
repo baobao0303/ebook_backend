@@ -1,14 +1,16 @@
 import mongoose from "mongoose";
 
-const uri = process.env.MONGO_URI || "mongodb://localhost:27017/ebook_collection";
+const uri = process.env.MONGO_URI;
+
+if (!uri) throw new Error("Database uri is missing!");
 
 export const dbConnect = () => {
   mongoose
     .connect(uri)
     .then(() => {
-      console.log("Connected to MongoDB");
+      console.log("db connected!");
     })
-    .catch((err) => {
-      console.log("Error connecting to MongoDB", err.message);
+    .catch((error) => {
+      console.log("db connection failed: ", error.message);
     });
 };

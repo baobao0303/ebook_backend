@@ -6,6 +6,7 @@ import express, { ErrorRequestHandler } from "express";
 import authRoute from "./routes/auth";
 import { errorHandler } from "./middlewares/error";
 import { fileParser } from "./middlewares/file";
+import authorRouter from "./routes/author";
 
 const app = express();
 ///MIDDLEWARES
@@ -27,6 +28,7 @@ app.use(cookieParser());
 // ROUTES
 
 app.use("/auth", authRoute);
+app.use("/author", authorRouter);
 app.post("/test", fileParser, (req, res) => {
   console.log(req.body);
   console.log(req.files);

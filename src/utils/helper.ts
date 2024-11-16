@@ -16,7 +16,7 @@ export const formatUserProfile = (user: UserDoc): Request["user"] => {
     name: user.name,
     email: user.email,
     role: user.role,
-    // @ts-ignore
     avatar: user.avatar?.url,
+    signedUp: user.signedUp,
   };
 };

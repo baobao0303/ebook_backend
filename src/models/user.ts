@@ -6,6 +6,7 @@ export interface UserDoc {
   name?: string;
   signedUp: boolean;
   avatar?: { url: string; id: string };
+  authorId?: ObjectId;
 }
 
 const userSchema = new Schema<UserDoc>({
@@ -32,6 +33,10 @@ const userSchema = new Schema<UserDoc>({
     type: Object,
     url: String,
     id: String,
+  },
+  authorId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
   },
 });
 const UserModel = model("User", userSchema);

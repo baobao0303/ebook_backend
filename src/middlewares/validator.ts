@@ -255,3 +255,29 @@ export const validate = <T extends ZodRawShape>(
     }
   };
 };
+
+//  = [{ product: idOf the product, count: how many products that our users wants to purchase }]
+
+export const cartItemsSchema = z.object({
+  items: z.array(
+    z.object({
+      product: z
+        .string({
+          required_error: "Product id is missing!",
+          invalid_type_error: "Invalid product id!",
+        })
+        .transform((arg, ctx) => {
+          if (!isValidObjectId(arg)) {
+            ctx.addIssue({ code: "custom", message: "Invalid product id!" });
+            return z.NEVER;
+          }
+
+          return arg;
+        }),
+      quantity: z.number({
+        required_error: "Quantity is missing!",
+        invalid_type_error: "Quantity must be number!",
+      }),
+    })
+  ),
+});

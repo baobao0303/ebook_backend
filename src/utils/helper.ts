@@ -24,6 +24,7 @@ export const formatUserProfile = (user: UserDoc): Request["user"] => {
     avatar: user.avatar?.url,
     signedUp: user.signedUp,
     authorId: user.authorId?.toString(),
+    books: user.books.map((b) => b.toString()),
   };
 };
 
@@ -40,4 +41,8 @@ export const generateS3ClientPublicUrl = (
   uniqueKey: string
 ): string => {
   return `https://${bucketName}.s3.amazonaws.com/${uniqueKey}`;
+};
+
+export const sanitizeUrl = (url: string) => {
+  return url.replace(/ /g, "%20");
 };

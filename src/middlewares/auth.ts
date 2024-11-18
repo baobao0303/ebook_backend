@@ -54,11 +54,7 @@ export const isAuth: RequestHandler = async (req, res, next) => {
   next();
 };
 
-export const isPurchasedByTheUser: AddReviewRequestHandler = async (
-  req,
-  res,
-  next
-) => {
+export const isPurchasedByTheUser: AddReviewRequestHandler = async (req, res, next) => {
   const user = await UserModel.findOne({
     _id: req.user.id,
     books: req.body.bookId,

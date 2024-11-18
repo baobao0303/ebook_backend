@@ -5,8 +5,12 @@ import {
   generateS3ClientPublicUrl,
   sendErrorResponse,
 } from "@/utils/helper";
-import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { Types } from "mongoose";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { ObjectId, Types } from "mongoose";
 import slugify from "slugify";
 import fs from "fs";
 import s3Client from "@/cloud/aws";
@@ -19,6 +23,10 @@ import {
 import AuthorModel from "@/models/author";
 import path from "path";
 import cloudinary from "@/cloud/cludinary";
+import { RequestHandler } from "express";
+import UserModel from "@/models/user";
+import HistoryModel, { Settings } from "@/models/history";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const createNewBook: CreateBookRequestHandler = async (req, res) => {
   const { body, files, user } = req;
@@ -244,4 +252,170 @@ export const updateBook: UpdateBookRequestHandler = async (req, res) => {
   await book.save();
 
   res.send(fileUploadUrl);
+};
+
+interface PopulatedBooks {
+  cover?: {
+    url: string;
+    id: string;
+  };
+  _id: ObjectId;
+  author: {
+    _id: ObjectId;
+    name: string;
+    slug: string;
+  };
+  title: string;
+  slug: string;
+}
+
+export const getAllPurchasedBooks: RequestHandler = async (req, res) => {
+  const user = await UserModel.findById(req.user.id).populate<{
+    books: PopulatedBooks[];
+  }>({
+    path: "books",
+    select: "author title cover slug",
+    populate: { path: "author", select: "slug name" },
+  });
+
+  if (!user) return res.json({ books: [] });
+
+  res.json({
+    books: user.books.map((book) => ({
+      id: book._id,
+      title: book.title,
+      cover: book.cover?.url,
+      slug: book.slug,
+      author: {
+        name: book.author.name,
+        slug: book.author.slug,
+      },
+    })),
+  });
+};
+
+export const getBooksPublicDetails: RequestHandler = async (req, res) => {
+  const book = await BookModel.findOne({ slug: req.params.slug }).populate<{
+    author: PopulatedBooks["author"];
+  }>({
+    path: "author",
+    select: "name slug",
+  });
+
+  if (!book)
+    return sendErrorResponse({
+      status: 404,
+      message: "Book not found!",
+      res,
+    });
+
+  const {
+    _id,
+    title,
+    cover,
+    author,
+    slug,
+    description,
+    genre,
+    language,
+    publishedAt,
+    publicationName,
+    price: { mrp, sale },
+    fileInfo,
+    averageRating,
+  } = book;
+
+  res.json({
+    book: {
+      id: _id,
+      title,
+      genre,
+      language,
+      slug,
+      description,
+      publicationName,
+      fileInfo,
+      publishedAt: publishedAt.toISOString().split("T")[0],
+      cover: cover?.url,
+      rating: averageRating?.toFixed(1),
+      price: {
+        mrp: (mrp / 100).toFixed(2), // $1 100C/100 = $1
+        sale: (sale / 100).toFixed(2), // 1.50
+      },
+      author: {
+        id: author._id,
+        name: author.name,
+        slug: author.slug,
+      },
+    },
+  });
+};
+
+export const getBookByGenre: RequestHandler = async (req, res) => {
+  const books = await BookModel.find({ genre: req.params.genre }).limit(5);
+
+  res.json({
+    books: books.map((book) => {
+      const {
+        _id,
+        title,
+        cover,
+        averageRating,
+        slug,
+        genre,
+        price: { mrp, sale },
+      } = book;
+      return {
+        id: _id,
+        title,
+        genre,
+        slug,
+        cover: cover?.url,
+        rating: averageRating?.toFixed(1),
+        price: {
+          mrp: (mrp / 100).toFixed(2), // $1 100C/100 = $1
+          sale: (sale / 100).toFixed(2), // 1.50
+        },
+      };
+    }),
+  });
+};
+
+export const generateBookAccessUrl: RequestHandler = async (req, res) => {
+  const { slug } = req.params;
+
+  const book = await BookModel.findOne({ slug });
+  if (!book)
+    return sendErrorResponse({ res, message: "Book not found!", status: 404 });
+
+  const user = await UserModel.findOne({ _id: req.user.id, books: book._id });
+  if (!user)
+    return sendErrorResponse({ res, message: "User not found!", status: 404 });
+
+  const history = await HistoryModel.findOne({
+    reader: req.user.id,
+    book: book._id,
+  });
+
+  const settings: Settings = {
+    lastLocation: "",
+    highlights: [],
+  };
+
+  if (history) {
+    settings.highlights = history.highlights.map((h) => ({
+      fill: h.fill,
+      selection: h.selection,
+    }));
+    settings.lastLocation = history.lastLocation;
+  }
+
+  // generate access url if you are using aws
+  const bookGetCommand = new GetObjectCommand({
+    Bucket: process.env.AWS_PRIVATE_BUCKET,
+    Key: book.fileInfo.id,
+  });
+  const accessUrl = await getSignedUrl(s3Client, bookGetCommand);
+
+  res.json({ settings, url: accessUrl });
 };
